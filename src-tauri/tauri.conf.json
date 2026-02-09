@@ -1,0 +1,50 @@
+{
+  "productName": "mdglasses",
+  "version": "0.1.0",
+  "identifier": "app.mdglasses",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "mdglasses",
+        "width": 900,
+        "height": 700,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost; style-src 'self' 'unsafe-inline'; script-src 'self'",
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "allow": ["$RESOURCE/**", "**"],
+          "deny": []
+        }
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "rpm"],
+    "icon": [],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
+    "longDescription": "Cross-platform Markdown viewer with GitHub-like styling.",
+    "shortDescription": "Markdown viewer",
+    "externalBin": [],
+    "resources": [],
+    "copyright": "",
+    "category": "Utility"
+  },
+  "plugins": {}
+}

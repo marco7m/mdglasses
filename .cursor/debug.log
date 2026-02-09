@@ -1,0 +1,15 @@
+{"id":"index_html_loaded","timestamp":1770593165737,"location":"index.html:inline","message":"index.html body parsed, inline script ran","data":{},"hypothesisId":"H4"}
+{"id":"main_entry","timestamp":1770593536134,"location":"main.rs:5","message":"main entered","data":{},"hypothesisId":"H1"}
+{"id":"run_entry","timestamp":1770593536134,"location":"lib.rs:run","message":"run() entered","data":{},"hypothesisId":"H1"}
+{"id":"run_app_entry","timestamp":1770593536134,"location":"lib.rs:run_app","message":"run_app entered","data":{},"hypothesisId":"H1,H2"}
+{"id":"setup_called","timestamp":1770593536269,"location":"lib.rs:setup","message":"tauri setup called","data":{},"hypothesisId":"H2,H3"}
+{"id":"window_check","timestamp":1770593539269,"location":"lib.rs:setup_delayed","message":"main window check","data":{"has_window":false,"label":"none"},"hypothesisId":"H3"}
+{"id":"main_entry","timestamp":1770598332887,"location":"main.rs:5","message":"main entered","data":{},"hypothesisId":"H1"}
+{"id":"run_entry","timestamp":1770598332887,"location":"lib.rs:run","message":"run() entered","data":{},"hypothesisId":"H1"}
+{"id":"run_app_entry","timestamp":1770598332887,"location":"lib.rs:run_app","message":"run_app entered","data":{},"hypothesisId":"H1,H2"}
+{"id":"setup_called","timestamp":1770598333098,"location":"lib.rs:setup","message":"tauri setup called","data":{},"hypothesisId":"H2,H3"}
+{"id":"window_check","timestamp":1770598336098,"location":"lib.rs:setup_delayed","message":"main window check","data":{"has_window":false,"label":"none"},"hypothesisId":"H3"}
+{"id":"run_entry","timestamp":1770598390849,"location":"lib.rs:run","message":"run() entered","data":{},"hypothesisId":"H1"}
+{"id":"run_app_entry","timestamp":1770598390849,"location":"lib.rs:run_app","message":"run_app entered","data":{},"hypothesisId":"H1,H2"}
+{"id":"setup_called","timestamp":1770598390987,"location":"lib.rs:setup","message":"tauri setup called","data":{},"hypothesisId":"H2,H3"}
+{"id":"window_check","timestamp":1770598393987,"location":"lib.rs:setup_delayed","message":"main window check","data":{"has_window":false,"label":"none"},"hypothesisId":"H3"}
