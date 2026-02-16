@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod markdown;
+mod obsidian_embed;
 mod wiki;
 
 use std::path::{Path, PathBuf};
@@ -15,6 +16,7 @@ use tauri::Emitter;
 use tauri::Manager;
 
 use markdown::render_markdown_safe;
+use obsidian_embed::{RenderCache, RenderContext, VaultIndex};
 use wiki::build_tree;
 
 type AppResult<T> = Result<T, String>;
@@ -57,6 +59,9 @@ impl InitialFile {
 
 struct WatchService(RwLock<Option<Sender<Vec<String>>>>);
 
+/// Per-vault state: canonical root, index, and render cache for embed expansion.
+struct VaultState(RwLock<Option<(PathBuf, VaultIndex, RenderCache)>>);
+
 impl WatchService {
     fn set_sender(&self, sender: Sender<Vec<String>>) {
         *self.0.write().unwrap() = Some(sender);
@@ -94,12 +99,39 @@ fn get_initial_file(state: tauri::State<InitialFile>) -> Option<InitialPath> {
 }
 
 #[tauri::command]
-fn open_markdown_file(path: String) -> AppResult<OpenMarkdownFileResult> {
+fn open_markdown_file(
+    path: String,
+    vault_root: Option<String>,
+    state: tauri::State<VaultState>,
+) -> AppResult<OpenMarkdownFileResult> {
     let canonical_path = canonicalize_path(&path)?;
     let path_str = path_to_string(&canonical_path)?;
     let base_dir = parent_dir_string(&canonical_path)?;
     let raw_md = std::fs::read_to_string(&path_str).map_err(|e| e.to_string())?;
-    let html = render_markdown_safe(&raw_md);
+
+    let html = if let Some(vault_str) = vault_root {
+        let vault_canon = canonicalize_path(&vault_str)?;
+        let mut guard = state.0.write().unwrap();
+        if let Some((root, index, cache)) = guard.as_mut() {
+            if *root == vault_canon {
+                let mut ctx = RenderContext {
+                    vault_root: root.clone(),
+                    index,
+                    cache,
+                    visited: std::collections::HashSet::new(),
+                    depth: 0,
+                    max_depth: 5,
+                };
+                obsidian_embed::render_markdown_with_embeds(&canonical_path, &mut ctx)
+            } else {
+                render_markdown_safe(&raw_md)
+            }
+        } else {
+            render_markdown_safe(&raw_md)
+        }
+    } else {
+        render_markdown_safe(&raw_md)
+    };
 
     Ok(OpenMarkdownFileResult {
         raw_md,
@@ -109,11 +141,20 @@ fn open_markdown_file(path: String) -> AppResult<OpenMarkdownFileResult> {
 }
 
 #[tauri::command]
-fn open_wiki_folder(path: String) -> AppResult<OpenWikiFolderResult> {
+fn open_wiki_folder(
+    path: String,
+    state: tauri::State<VaultState>,
+) -> AppResult<OpenWikiFolderResult> {
     let root = canonicalize_path(&path)?;
     let root_str = path_to_string(&root)?;
     let tree = build_tree(&root_str)?;
-    let (initial_note_path, initial_html) = wiki::initial_note(&root_str)?;
+
+    let index = obsidian_embed::VaultIndex::build_index(&root)?;
+    let mut cache = RenderCache::default();
+    let (initial_note_path, initial_html) =
+        wiki::initial_note_with_embeds(&root_str, &index, &mut cache)?;
+
+    *state.0.write().unwrap() = Some((root, index, cache));
 
     Ok(OpenWikiFolderResult {
         tree,
@@ -186,6 +227,7 @@ fn watch_paths(state: tauri::State<WatchService>, paths: Vec<String>) -> AppResu
 fn run_app(initial_file: Option<InitialPath>) {
     tauri::Builder::default()
         .manage(InitialFile(RwLock::new(initial_file)))
+        .manage(VaultState(RwLock::new(None)))
         .manage(WatchService(RwLock::new(None)))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())

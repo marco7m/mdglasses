@@ -23,6 +23,9 @@ if (!appRoot) throw new Error("Missing #app root element");
 
 const { contentEl, treePanel, treeResizeHandle, titleEl, btnOpen, openMenu, themeSelect, treeSearch, treeHideToggle, breadcrumb } = renderAppShell(appRoot);
 
+// Adicionar loading imediatamente para esconder mensagem "abra um arquivo" desde o início
+contentEl.classList.add("loading");
+
 const state: AppState = {
   mode: "file",
   currentPath: null,
@@ -145,7 +148,9 @@ async function loadFile(path: string, options: { watch?: boolean } = {}): Promis
 async function openWikiNote(path: string): Promise<void> {
   if (!state.wikiRoot) return;
 
-  const result = await openMarkdownFile(path);
+  const result = await openMarkdownFile(path, {
+    vaultRoot: state.wikiRoot,
+  });
 
   state.currentPath = path;
   state.currentBaseDir = state.wikiRoot;
@@ -267,6 +272,22 @@ function setupLinkHandler(): void {
 
     event.preventDefault();
 
+    if (href.startsWith("app://open")) {
+      try {
+        const url = new URL(href);
+        const path = url.searchParams.get("path");
+        const decoded = path ? decodeURIComponent(path) : "";
+        if (decoded && state.mode === "wiki") {
+          void openWikiNote(decoded).catch(console.error);
+        } else if (decoded && state.mode === "file") {
+          void loadFile(decoded).catch(console.error);
+        }
+      } catch {
+        // Broken or invalid app://open link; do nothing
+      }
+      return;
+    }
+
     if (isExternalHref(href)) {
       void openUrl(href);
       return;
@@ -297,21 +318,33 @@ function setupWatchListener(): void {
 }
 
 function bootstrap(): void {
+  // Priorizar carregamento do arquivo inicial se houver
+  void getInitialFile().then((initialPath) => {
+    if (initialPath) {
+      // Loading já foi adicionado imediatamente após renderShell
+      const loadPromise = initialPath.is_dir
+        ? loadWiki(initialPath.path)
+        : loadFile(initialPath.path);
+      void loadPromise.finally(() => {
+        // Remover classe loading após carregamento (sucesso ou erro)
+        contentEl.classList.remove("loading");
+      });
+    } else {
+      // Não há arquivo inicial - remover loading para mostrar mensagem "abra um arquivo"
+      contentEl.classList.remove("loading");
+    }
+  }).catch((error) => {
+    console.error(error);
+    contentEl.classList.remove("loading");
+  });
+
+  // Configurar resto da aplicação em paralelo
   setupTheme();
   initTreeResizer(treePanel, treeResizeHandle);
   setupTreeSearch(treeSearch, treeHideToggle, treePanel);
   setupOpenMenu();
   setupLinkHandler();
   setupWatchListener();
-
-  void getInitialFile().then((initialPath) => {
-    if (!initialPath) return;
-    if (initialPath.is_dir) {
-      return loadWiki(initialPath.path);
-    } else {
-      return loadFile(initialPath.path);
-    }
-  }).catch(console.error);
 }
 
 bootstrap();

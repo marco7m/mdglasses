@@ -74,6 +74,24 @@ describe("tauriApi", () => {
 
       expect(result).toEqual(mockResult);
     });
+
+    it("passes vaultRoot when provided", async () => {
+      const mockInvoke = vi.mocked(invoke);
+      const testPath = "/vault/notes/note.md";
+      const vaultRoot = "/vault";
+      mockInvoke.mockResolvedValue({
+        raw_md: "# Note",
+        html: "<h1>Note</h1>",
+        base_dir: "/vault",
+      });
+
+      await openMarkdownFile(testPath, { vaultRoot });
+
+      expect(mockInvoke).toHaveBeenCalledWith("open_markdown_file", {
+        path: testPath,
+        vaultRoot,
+      });
+    });
   });
 
   describe("openWikiFolder", () => {

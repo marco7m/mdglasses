@@ -10,8 +10,15 @@ export function getInitialFile(): Promise<InitialPath | null> {
   return invoke<InitialPath | null>("get_initial_file");
 }
 
-export function openMarkdownFile(path: string): Promise<OpenMarkdownFileResult> {
-  return invoke<OpenMarkdownFileResult>("open_markdown_file", { path });
+export function openMarkdownFile(
+  path: string,
+  options?: { vaultRoot?: string | null }
+): Promise<OpenMarkdownFileResult> {
+  const args =
+    options?.vaultRoot != null
+      ? { path, vaultRoot: options.vaultRoot }
+      : { path };
+  return invoke<OpenMarkdownFileResult>("open_markdown_file", args);
 }
 
 export function openWikiFolder(path: string): Promise<OpenWikiFolderResult> {
