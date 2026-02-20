@@ -16,6 +16,10 @@ describe("ui", () => {
       expect(result.treeSearch).toBeInstanceOf(HTMLInputElement);
       expect(result.treeHideToggle).toBeInstanceOf(HTMLInputElement);
       expect(result.breadcrumb).toBeInstanceOf(HTMLElement);
+      expect(result.openModal).toBeInstanceOf(HTMLElement);
+      expect(result.openModalFolder).toBeInstanceOf(HTMLButtonElement);
+      expect(result.openModalFile).toBeInstanceOf(HTMLButtonElement);
+      expect(result.openModalCancel).toBeInstanceOf(HTMLButtonElement);
     });
 
     it("creates toolbar with correct structure", () => {
@@ -107,6 +111,24 @@ describe("ui", () => {
       expect(result.treeSearch.id).toBe("tree-search");
       expect(result.treeHideToggle.id).toBe("tree-hide-patterns");
       expect(result.breadcrumb.id).toBe("breadcrumb");
+      expect(result.openModal.id).toBe("open-modal");
+      expect(result.openModalFolder.id).toBe("open-modal-folder");
+      expect(result.openModalFile.id).toBe("open-modal-file");
+      expect(result.openModalCancel.id).toBe("open-modal-cancel");
+    });
+
+    it("open modal is hidden by default and has folder, file, and cancel buttons", () => {
+      const root = document.createElement("div");
+      const result = renderAppShell(root);
+
+      expect(result.openModal.classList.contains("hidden")).toBe(true);
+      expect(result.openModal.getAttribute("aria-hidden")).toBe("true");
+      expect(result.openModal.querySelector("#open-modal-folder")).not.toBeNull();
+      expect(result.openModal.querySelector("#open-modal-file")).not.toBeNull();
+      expect(result.openModal.querySelector("#open-modal-cancel")).not.toBeNull();
+      expect(result.openModalFolder.textContent).toContain("Abrir pasta");
+      expect(result.openModalFile.textContent).toContain("Abrir ficheiro");
+      expect(result.openModalCancel.textContent).toContain("Cancelar");
     });
 
     it("always creates required elements (requireElement never fails in renderAppShell)", () => {

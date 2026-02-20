@@ -28,7 +28,7 @@ interface AppState {
 const appRoot = document.querySelector<HTMLDivElement>("#app");
 if (!appRoot) throw new Error("Missing #app root element");
 
-const { contentEl, treePanel, treeResizeHandle, titleEl, btnBack, btnForward, btnOpen, themeSelect, treeSearch, treeHideToggle, breadcrumb } = renderAppShell(appRoot);
+const { contentEl, treePanel, treeResizeHandle, titleEl, btnBack, btnForward, btnOpen, themeSelect, treeSearch, treeHideToggle, breadcrumb, openModal, openModalFolder, openModalFile, openModalCancel } = renderAppShell(appRoot);
 
 // Adicionar loading imediatamente para esconder mensagem "abra um arquivo" desde o início
 contentEl.classList.add("loading");
@@ -364,23 +364,67 @@ function setupKeyboardShortcuts(): void {
 }
 
 function setupOpen(): void {
-  btnOpen.addEventListener("click", async () => {
+  const overlay = openModal.querySelector(".modal-overlay");
+  const modalBox = openModal.querySelector(".modal-box");
+
+  function closeOpenModal(): void {
+    openModal.classList.add("hidden");
+    openModal.setAttribute("aria-hidden", "true");
+    btnOpen.focus();
+  }
+
+  function showOpenModal(): void {
+    openModal.classList.remove("hidden");
+    openModal.setAttribute("aria-hidden", "false");
+    openModalFolder.focus();
+  }
+
+  btnOpen.addEventListener("click", () => {
+    showOpenModal();
+  });
+
+  if (overlay) {
+    overlay.addEventListener("click", () => closeOpenModal());
+  }
+  if (modalBox) {
+    modalBox.addEventListener("click", (e) => e.stopPropagation());
+  }
+
+  openModalFolder.addEventListener("click", async () => {
+    closeOpenModal();
     try {
-      const folderSelected = await open({ directory: true });
-      if (folderSelected && typeof folderSelected === "string") {
-        await loadWiki(folderSelected);
-        return;
+      const path = await open({ directory: true });
+      if (path && typeof path === "string") {
+        await loadWiki(path);
       }
-      const fileSelected = await open({
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao abrir pasta";
+      showError(message);
+    }
+  });
+
+  openModalFile.addEventListener("click", async () => {
+    closeOpenModal();
+    try {
+      const path = await open({
         multiple: false,
         filters: [{ name: "Markdown", extensions: ["md"] }],
       });
-      if (fileSelected && typeof fileSelected === "string") {
-        await loadFile(fileSelected);
+      if (path && typeof path === "string") {
+        await loadFile(path);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao abrir arquivo/pasta";
+      const message = error instanceof Error ? error.message : "Erro ao abrir ficheiro";
       showError(message);
+    }
+  });
+
+  openModalCancel.addEventListener("click", () => closeOpenModal());
+
+  openModal.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeOpenModal();
+      e.preventDefault();
     }
   });
 }

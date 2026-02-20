@@ -10,6 +10,10 @@ export interface AppElements {
   treeSearch: HTMLInputElement;
   treeHideToggle: HTMLInputElement;
   breadcrumb: HTMLElement;
+  openModal: HTMLElement;
+  openModalFolder: HTMLButtonElement;
+  openModalFile: HTMLButtonElement;
+  openModalCancel: HTMLButtonElement;
 }
 
 function requireElement<T extends Element>(parent: ParentNode, selector: string): T {
@@ -53,6 +57,17 @@ export function renderAppShell(root: HTMLDivElement): AppElements {
         <article id="content" class="markdown-body content"></article>
       </div>
     </main>
+    <div id="open-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="open-modal-title" aria-hidden="true">
+      <div class="modal-overlay"></div>
+      <div class="modal-box">
+        <h2 id="open-modal-title" class="modal-title">Abrir</h2>
+        <div class="modal-actions">
+          <button type="button" id="open-modal-folder" class="btn-open-modal" aria-label="Abrir pasta">Abrir pasta</button>
+          <button type="button" id="open-modal-file" class="btn-open-modal" aria-label="Abrir ficheiro">Abrir ficheiro</button>
+          <button type="button" id="open-modal-cancel" class="btn-open-modal btn-cancel" aria-label="Cancelar">Cancelar</button>
+        </div>
+      </div>
+    </div>
   `;
 
   return {
@@ -67,5 +82,9 @@ export function renderAppShell(root: HTMLDivElement): AppElements {
     treeSearch: requireElement<HTMLInputElement>(root, "#tree-search"),
     treeHideToggle: requireElement<HTMLInputElement>(root, "#tree-hide-patterns"),
     breadcrumb: requireElement<HTMLElement>(root, "#breadcrumb"),
+    openModal: requireElement<HTMLElement>(root, "#open-modal"),
+    openModalFolder: requireElement<HTMLButtonElement>(root, "#open-modal-folder"),
+    openModalFile: requireElement<HTMLButtonElement>(root, "#open-modal-file"),
+    openModalCancel: requireElement<HTMLButtonElement>(root, "#open-modal-cancel"),
   };
 }

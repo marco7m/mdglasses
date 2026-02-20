@@ -1,57 +1,60 @@
 # mdglasses
 
-A cross-platform desktop Markdown reader built with Tauri. Open a single `.md` file or a folder as a wiki, navigate notes in a tree, and get live updates when files change on disk.
+Leitor de Markdown desktop, multiplataforma, feito com Tauri.  
+Abra um arquivo `.md` isolado ou uma pasta inteira em modo wiki, com navegação em árvore, links internos e atualização automática quando os arquivos mudam em disco.
 
 ## Screenshots
 
-| Modo wiki (árvore) | Tema sepia | Tema escuro |
-|--------------------|------------|-------------|
-| <img src="docs/screenshots/folder-tree.png" alt="Modo wiki" width="360" /> | <img src="docs/screenshots/sepia-theme.png" alt="Tema sepia" width="360" /> | <img src="docs/screenshots/dark-theme.png" alt="Tema escuro" width="360" /> |
+<p align="center">
+  <img src="docs/screenshots/folder-tree.png" alt="Modo wiki com árvore de arquivos" width="280" />
+  <img src="docs/screenshots/sepia-theme.png" alt="Tema sepia" width="280" />
+  <img src="docs/screenshots/dark-theme.png" alt="Tema escuro" width="280" />
+</p>
 
-## Features
+## Principais recursos
 
-- GitHub-like Markdown rendering
-- Wiki mode for folders with tree navigation
-- Single **Open** button: choose a folder (wiki) or cancel and choose a file
-- Internal Markdown link navigation (including Obsidian-style `[[wikilinks]]`)
-- Relative image loading from local files
-- Live reload via filesystem watcher
-- Code syntax highlighting with copy-to-clipboard on code blocks
-- Multiple UI themes (light, sepia, dark)
-- Safe Markdown rendering (raw HTML disabled)
+- Renderização de Markdown com estilo similar ao GitHub
+- Modo wiki para pastas com navegação por árvore
+- Um único botão **Abrir** para escolher pasta (wiki) ou arquivo `.md`
+- Navegação por links Markdown e `[[wikilinks]]` (estilo Obsidian)
+- Carregamento de imagens relativas locais
+- Recarregamento automático via watcher de arquivos
+- Destaque de sintaxe em blocos de código + botão **Copiar**
+- Temas de interface: claro, sepia e escuro
+- Renderização segura (HTML bruto desabilitado)
 
-## Quick Start
+## Requisitos
+
+- Node.js 18+ e npm
+- Rust (toolchain stable)
+- Dependências de plataforma do Tauri:
+  - Linux (Ubuntu/Debian): pacotes de desenvolvimento WebKitGTK/GTK
+  - macOS: Xcode Command Line Tools
+  - Windows: Visual Studio Build Tools (C++) + WebView2
+
+No Linux, você pode usar o helper:
+
+```bash
+bash scripts/install-deps-linux.sh
+```
+
+## Início rápido
 
 ```bash
 npm install
 npm run tauri dev
 ```
 
-This starts Vite + Tauri with hot reload.
+Esse comando sobe Vite + Tauri com hot reload.
 
-## Prerequisites
-
-- Node.js 18+ and npm
-- Rust stable toolchain
-- Platform dependencies for Tauri:
-  - Linux (Ubuntu/Debian): WebKitGTK/GTK development packages
-  - macOS: Xcode Command Line Tools
-  - Windows: Visual Studio Build Tools (C++) + WebView2
-
-Linux helper script:
+## Comandos úteis
 
 ```bash
-bash scripts/install-deps-linux.sh
-```
-
-## Development Commands
-
-```bash
-npm run dev          # Vite only (browser)
-npm run tauri dev    # Full desktop app in dev mode
-npm run tauri:dev    # Linux fallback (forces X11 + disables WebKit compositing)
-npm test             # Frontend tests (Vitest)
-npm run test:rust    # Rust tests
+npm run dev          # Frontend no navegador (Vite)
+npm run tauri dev    # App desktop completo em modo desenvolvimento
+npm run tauri:dev    # Fallback Linux (força X11 + desativa compositing)
+npm test             # Testes frontend (Vitest)
+npm run test:rust    # Testes Rust
 ```
 
 ## Build
@@ -60,58 +63,61 @@ npm run test:rust    # Rust tests
 npm run tauri build
 ```
 
-Build artifacts are generated under:
+Artefatos principais:
 
-- `src-tauri/target/release/mdglasses` (binary)
-- `src-tauri/target/release/bundle/` (installer packages like `.deb`/`.rpm`)
+- Binário: `src-tauri/target/release/mdglasses`
+- Pacotes instaláveis: `src-tauri/target/release/bundle/` (`.deb`, `.rpm`, etc.)
 
-In some CI environments, you may need:
+Em alguns ambientes de CI, pode ser necessário:
 
 ```bash
 CI=false npm run tauri build
 ```
 
-## Run Release Binary Locally
+## Executar binário de release localmente
 
 ```bash
 bash scripts/run-release.sh
 ```
 
-This script builds the frontend, links `dist/` to the expected release location, and runs the compiled app.
+O script gera o frontend, vincula `dist/` ao local esperado pela release e abre o app compilado.
 
-## Usage
+## Como usar
 
-- Click **Abrir** (Open): the **folder picker** appears first. Select a folder to open it as a wiki (tree of `.md` files). To open a single file instead, cancel the folder picker and then choose a Markdown file in the file picker.
-- In wiki mode: browse `.md` files in the side tree, search from the tree search box, and click internal links (or `[[wikilinks]]`) to navigate. Use the breadcrumb to jump back. Back/forward buttons and keyboard shortcuts (Alt+Left/Right) work for history.
-- Code blocks show a **Copy** button on the top-right edge.
+1. Clique em **Abrir**.
+2. Primeiro aparece o seletor de pasta:
+   - Se selecionar uma pasta, o app abre em modo wiki (árvore de arquivos `.md`).
+   - Se cancelar, abre o seletor de arquivo para escolher um Markdown único.
+3. No modo wiki, use a busca da árvore, breadcrumb, links internos e histórico (Alt+Left / Alt+Right).
+4. Em blocos de código, use o botão **Copiar** no canto superior direito.
 
-## Tech Stack
+## Stack técnica
 
 - Frontend: TypeScript + Vite
-- Desktop shell: Tauri v2
-- Markdown rendering: `comrak` (Rust)
-- Highlighting: `highlight.js`
+- Desktop: Tauri v2
+- Renderização Markdown: `comrak` (Rust)
+- Highlight de código: `highlight.js`
 
 ## Troubleshooting
 
-Linux blank/white window issue (WebKitGTK on some Wayland setups):
+Janela branca no Linux (alguns setups Wayland/WebKitGTK):
 
 ```bash
 npm run tauri:dev
 ```
 
-If port `1420` is already in use:
+Porta `1420` já em uso:
 
 ```bash
 lsof -ti:1420 | xargs -r kill
 ```
 
-## Security Notes
+## Segurança
 
-- Markdown is rendered in safe mode (`comrak` with `unsafe_ = false`)
-- Raw HTML/scripts from Markdown are not executed
-- Local assets are resolved through Tauri's asset protocol
+- Markdown em modo seguro (`comrak` com `unsafe_ = false`)
+- HTML/scripts do conteúdo Markdown não são executados
+- Assets locais resolvidos pelo protocolo de assets do Tauri
 
-## License
+## Licença
 
-Dual-licensed under **MIT OR Apache-2.0** (as declared in `src-tauri/Cargo.toml`).
+Licensed under **MIT** — see [LICENSE](LICENSE).

@@ -471,3 +471,58 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 [data-theme="dark"] .tree-panel {
   scrollbar-color: #484f58 #161b22;
 }
+
+/* Open modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.modal.hidden {
+  display: none;
+}
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+.modal-box {
+  position: relative;
+  background: var(--toolbar-bg, #f6f8fa);
+  border: 1px solid var(--toolbar-border, #d0d7de);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  min-width: 280px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.modal-title {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.btn-open-modal {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  border: 1px solid var(--toolbar-border, #d0d7de);
+  border-radius: 6px;
+  background: var(--toolbar-btn-bg, #f6f8fa);
+  color: var(--toolbar-color, #24292f);
+  cursor: pointer;
+}
+.btn-open-modal:hover {
+  background: var(--toolbar-btn-hover, #eaeef2);
+  border-color: var(--toolbar-btn-hover-border, #d0d7de);
+}
+.btn-open-modal.btn-cancel {
+  margin-top: 0.25rem;
+}
