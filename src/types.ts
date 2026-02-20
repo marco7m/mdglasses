@@ -1,4 +1,4 @@
-export type ThemeId = "light" | "sepia" | "dark" | "modern" | "nordic";
+export type ThemeId = "light" | "sepia" | "dark";
 export type Mode = "file" | "wiki";
 
 export interface OpenMarkdownFileResult {

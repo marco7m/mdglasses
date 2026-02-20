@@ -1,21 +1,17 @@
 import hljsLightUrl from "highlight.js/styles/github.css?url";
 import hljsDarkUrl from "highlight.js/styles/github-dark.css?url";
-import hljsModernUrl from "highlight.js/styles/tomorrow-night-blue.css?url";
-import hljsNordicUrl from "highlight.js/styles/nord.css?url";
 import markdownDarkUrl from "github-markdown-css/github-markdown-dark.css?url";
 import type { ThemeId } from "./types";
 
 const THEME_STORAGE_KEY = "mdglasses-theme";
 const DEFAULT_THEME: ThemeId = "light";
-const DARK_MARKDOWN_THEMES = new Set<ThemeId>(["dark", "modern", "nordic"]);
-const VALID_THEMES: readonly ThemeId[] = ["light", "sepia", "dark", "modern", "nordic"];
+const DARK_MARKDOWN_THEMES = new Set<ThemeId>(["dark"]);
+const VALID_THEMES: readonly ThemeId[] = ["light", "sepia", "dark"];
 
 const HIGHLIGHT_THEME_BY_ID: Record<ThemeId, string> = {
   light: hljsLightUrl,
   sepia: hljsLightUrl,
   dark: hljsDarkUrl,
-  modern: hljsModernUrl,
-  nordic: hljsNordicUrl,
 };
 
 function ensureStylesheetLink(id: string): HTMLLinkElement {

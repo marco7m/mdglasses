@@ -1,0 +1,127 @@
+.notifications-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 400px;
+  pointer-events: none;
+}
+
+.notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  border-left: 4px solid;
+}
+
+.notification-show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.notification-hide {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.notification-success {
+  border-left-color: #28a745;
+}
+
+.notification-error {
+  border-left-color: #dc3545;
+}
+
+.notification-info {
+  border-left-color: #17a2b8;
+}
+
+.notification-warning {
+  border-left-color: #ffc107;
+}
+
+.notification-icon {
+  flex-shrink: 0;
+  font-weight: bold;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.notification-success .notification-icon {
+  color: #28a745;
+}
+
+.notification-error .notification-icon {
+  color: #dc3545;
+}
+
+.notification-info .notification-icon {
+  color: #17a2b8;
+}
+
+.notification-warning .notification-icon {
+  color: #ffc107;
+}
+
+.notification-message {
+  flex: 1;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #24292f;
+}
+
+.notification-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #57606a;
+  cursor: pointer;
+  padding: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.notification-close:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.notification-close:focus-visible {
+  outline: 2px solid #0969da;
+  outline-offset: 2px;
+}
+
+/* Dark theme support */
+[data-theme="dark"] .notification {
+  background: #1f2328;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .notification-message {
+  color: #e6edf3;
+}
+
+[data-theme="dark"] .notification-close {
+  color: #8b949e;
+}
+
+[data-theme="dark"] .notification-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}

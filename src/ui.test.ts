@@ -12,7 +12,6 @@ describe("ui", () => {
       expect(result.treeResizeHandle).toBeInstanceOf(HTMLElement);
       expect(result.titleEl).toBeInstanceOf(HTMLElement);
       expect(result.btnOpen).toBeInstanceOf(HTMLButtonElement);
-      expect(result.openMenu).toBeInstanceOf(HTMLElement);
       expect(result.themeSelect).toBeInstanceOf(HTMLSelectElement);
       expect(result.treeSearch).toBeInstanceOf(HTMLInputElement);
       expect(result.treeHideToggle).toBeInstanceOf(HTMLInputElement);
@@ -26,7 +25,7 @@ describe("ui", () => {
       const toolbar = root.querySelector("header.toolbar");
       expect(toolbar).not.toBeNull();
       expect(toolbar?.querySelector("#btn-open")).not.toBeNull();
-      expect(toolbar?.querySelector("#open-menu")).not.toBeNull();
+      expect(toolbar?.querySelector("#open-menu")).toBeNull();
       expect(toolbar?.querySelector("#theme-select")).not.toBeNull();
       expect(toolbar?.querySelector("#title")).not.toBeNull();
     });
@@ -70,23 +69,17 @@ describe("ui", () => {
       const result = renderAppShell(root);
 
       const options = Array.from(result.themeSelect.options).map((opt) => opt.value);
-      expect(options).toEqual(["light", "sepia", "dark", "modern", "nordic"]);
+      expect(options).toEqual(["light", "sepia", "dark"]);
     });
 
-    it("open menu has file and folder options", () => {
+    it("toolbar has open button and no file/folder dropdown", () => {
       const root = document.createElement("div");
       renderAppShell(root);
 
-      const menu = root.querySelector("#open-menu");
-      expect(menu).not.toBeNull();
-      expect(menu?.getAttribute("aria-hidden")).toBe("true");
-      
-      const fileBtn = menu?.querySelector('[data-open="file"]');
-      const folderBtn = menu?.querySelector('[data-open="folder"]');
-      expect(fileBtn).not.toBeNull();
-      expect(folderBtn).not.toBeNull();
-      expect(fileBtn?.textContent).toBe("Ficheiro");
-      expect(folderBtn?.textContent).toBe("Pasta");
+      const toolbar = root.querySelector("header.toolbar");
+      expect(toolbar?.querySelector("#btn-open")).not.toBeNull();
+      expect(toolbar?.querySelector("#open-menu")).toBeNull();
+      expect(toolbar?.querySelector("[data-open]")).toBeNull();
     });
 
     it("content wrapper contains breadcrumb and content", () => {
@@ -110,7 +103,6 @@ describe("ui", () => {
       expect(result.treeResizeHandle.id).toBe("tree-resize-handle");
       expect(result.titleEl.id).toBe("title");
       expect(result.btnOpen.id).toBe("btn-open");
-      expect(result.openMenu.id).toBe("open-menu");
       expect(result.themeSelect.id).toBe("theme-select");
       expect(result.treeSearch.id).toBe("tree-search");
       expect(result.treeHideToggle.id).toBe("tree-hide-patterns");

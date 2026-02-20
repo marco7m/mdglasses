@@ -57,6 +57,7 @@ fn in_skip_range(pos: usize, skip: &[(usize, usize)]) -> bool {
 }
 
 /// Span of one `![[...]]` embed in the source text.
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EmbedSpan {
     pub start: usize,
@@ -81,6 +82,7 @@ pub struct ParsedLink {
 
 /// Find all `![[` and matching `]]`; extract (start, end, raw_inner).
 /// Single pass, no regex. Invalid (unclosed) `![[` is skipped (no trailing `]]`).
+#[allow(dead_code)]
 pub fn parse_embed_syntax(text: &str) -> Vec<EmbedSpan> {
     let skip = compute_skip_ranges(text);
     find_obsidian_spans_inner(text, &skip)
@@ -247,6 +249,7 @@ pub enum ResolveResult {
     Resolved(PathBuf),
     Placeholder(PathBuf),
     NotFound,
+    #[allow(dead_code)]
     Ambiguous(Vec<PathBuf>),
 }
 
@@ -384,33 +387,126 @@ fn path_to_result(p: PathBuf) -> ResolveResult {
 pub struct CachedEntry {
     pub mtime: SystemTime,
     pub html: String,
+    pub size_bytes: usize,
+    pub last_accessed: SystemTime,
 }
 
 pub struct RenderCache {
-    pub entries: HashMap<PathBuf, CachedEntry>,
+    entries: HashMap<PathBuf, CachedEntry>,
+    access_order: Vec<PathBuf>,
+    max_entries: usize,
+    max_size_bytes: usize,
+    current_size_bytes: usize,
+    hits: usize,
+    misses: usize,
 }
+
+const MAX_CACHE_ENTRIES: usize = 100;
+const MAX_CACHE_SIZE_MB: usize = 50;
+const MAX_CACHE_SIZE_BYTES: usize = MAX_CACHE_SIZE_MB * 1024 * 1024;
 
 impl Default for RenderCache {
     fn default() -> Self {
         Self {
             entries: HashMap::new(),
+            access_order: Vec::new(),
+            max_entries: MAX_CACHE_ENTRIES,
+            max_size_bytes: MAX_CACHE_SIZE_BYTES,
+            current_size_bytes: 0,
+            hits: 0,
+            misses: 0,
         }
     }
 }
 
 impl RenderCache {
-    pub fn get(&self, path: &Path, mtime: SystemTime) -> Option<String> {
-        self.entries.get(path).and_then(|e| {
-            if e.mtime == mtime {
-                Some(e.html.clone())
-            } else {
-                None
+    pub fn get(&mut self, path: &Path, mtime: SystemTime) -> Option<String> {
+        let should_update = self.entries.get(path).map(|e| e.mtime == mtime).unwrap_or(false);
+        if should_update {
+            // Update access order
+            self.update_access_order(path);
+            self.hits += 1;
+            // Get again after update
+            if let Some(entry) = self.entries.get(path) {
+                return Some(entry.html.clone());
             }
-        })
+        }
+        self.misses += 1;
+        None
     }
 
     pub fn insert(&mut self, path: PathBuf, mtime: SystemTime, html: String) {
-        self.entries.insert(path, CachedEntry { mtime, html });
+        let size_bytes = html.len();
+        
+        // Remove old entry if exists
+        if let Some(old_entry) = self.entries.remove(&path) {
+            self.current_size_bytes -= old_entry.size_bytes;
+            self.remove_from_access_order(&path);
+        }
+
+        // Check if we need to evict entries
+        while (self.entries.len() >= self.max_entries || 
+               self.current_size_bytes + size_bytes > self.max_size_bytes) &&
+              !self.entries.is_empty() {
+            self.evict_lru();
+        }
+
+        // Insert new entry
+        let now = SystemTime::now();
+        let entry = CachedEntry {
+            mtime,
+            html: html.clone(),
+            size_bytes,
+            last_accessed: now,
+        };
+        
+        self.current_size_bytes += size_bytes;
+        self.entries.insert(path.clone(), entry);
+        self.access_order.push(path);
+    }
+
+    fn update_access_order(&mut self, path: &Path) {
+        // Remove from current position
+        self.access_order.retain(|p| p != path);
+        // Add to end (most recently used)
+        self.access_order.push(path.to_path_buf());
+        
+        // Update last_accessed time
+        if let Some(entry) = self.entries.get_mut(path) {
+            entry.last_accessed = SystemTime::now();
+        }
+    }
+
+    fn remove_from_access_order(&mut self, path: &Path) {
+        self.access_order.retain(|p| p != path);
+    }
+
+    fn evict_lru(&mut self) {
+        if let Some(lru_path) = self.access_order.first().cloned() {
+            if let Some(entry) = self.entries.remove(&lru_path) {
+                self.current_size_bytes -= entry.size_bytes;
+                self.remove_from_access_order(&lru_path);
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn get_stats(&self) -> (usize, usize, usize, usize) {
+        (
+            self.entries.len(),
+            self.current_size_bytes,
+            self.hits,
+            self.misses,
+        )
+    }
+
+    #[allow(dead_code)]
+    pub fn clear(&mut self) {
+        self.entries.clear();
+        self.access_order.clear();
+        self.current_size_bytes = 0;
+        self.hits = 0;
+        self.misses = 0;
     }
 }
 
@@ -467,6 +563,7 @@ pub fn preprocess_obsidian_links(markdown: &str, ctx: &mut RenderContext<'_>) ->
 /// Replace each ![[...]] with the expanded *markdown* of the target (so the final
 /// document is one markdown string for a single comrak pass). Processes from end to start.
 /// Prefer preprocess_obsidian_links for full wikilink + embed handling.
+#[allow(dead_code)]
 pub fn expand_embeds(markdown: &str, ctx: &mut RenderContext<'_>) -> String {
     let spans = parse_embed_syntax(markdown);
     if spans.is_empty() {
@@ -1067,6 +1164,102 @@ mod tests {
         };
         let html = render_markdown_with_embeds(&root.join("A.md"), &mut ctx);
         assert!(html.contains("[[Link]]"), "[[Link]] inside inline code should remain literal: {}", html);
+    }
+
+    #[test]
+    fn cache_lru_evicts_oldest_when_limit_reached() {
+        let mut cache = RenderCache::default();
+        let mtime = SystemTime::UNIX_EPOCH;
+        
+        // Insert entries up to limit
+        for i in 0..=MAX_CACHE_ENTRIES {
+            let path = PathBuf::from(format!("/file{}.md", i));
+            let html = format!("<h1>File {}</h1>", i);
+            cache.insert(path, mtime, html);
+        }
+        
+        let (count, _, _, _) = cache.get_stats();
+        assert!(count <= MAX_CACHE_ENTRIES, "cache should not exceed max entries");
+    }
+
+    #[test]
+    fn cache_lru_evicts_when_size_limit_reached() {
+        let mut cache = RenderCache::default();
+        let mtime = SystemTime::UNIX_EPOCH;
+        
+        // Insert large entries
+        let large_html = "x".repeat(1024 * 1024); // 1MB each
+        for i in 0..60 {
+            let path = PathBuf::from(format!("/large{}.md", i));
+            cache.insert(path, mtime, large_html.clone());
+        }
+        
+        let (_, size_bytes, _, _) = cache.get_stats();
+        assert!(size_bytes <= MAX_CACHE_SIZE_BYTES, "cache size should not exceed limit");
+    }
+
+    #[test]
+    fn cache_tracks_hits_and_misses() {
+        let mut cache = RenderCache::default();
+        let path = PathBuf::from("/test.md");
+        let mtime = SystemTime::UNIX_EPOCH;
+        
+        // Miss
+        let result = cache.get(&path, mtime);
+        assert!(result.is_none());
+        
+        // Insert
+        cache.insert(path.clone(), mtime, "<h1>Test</h1>".to_string());
+        
+        // Hit
+        let result = cache.get(&path, mtime);
+        assert!(result.is_some());
+        
+        let (_, _, hits, misses) = cache.get_stats();
+        assert_eq!(hits, 1);
+        assert_eq!(misses, 1);
+    }
+
+    #[test]
+    fn cache_updates_access_order_on_get() {
+        let mut cache = RenderCache::default();
+        let mtime = SystemTime::UNIX_EPOCH;
+        
+        let path1 = PathBuf::from("/file1.md");
+        let path2 = PathBuf::from("/file2.md");
+        
+        cache.insert(path1.clone(), mtime, "<h1>1</h1>".to_string());
+        cache.insert(path2.clone(), mtime, "<h1>2</h1>".to_string());
+        
+        // Access first file
+        cache.get(&path1, mtime);
+        
+        // Insert another to trigger eviction
+        for i in 3..=MAX_CACHE_ENTRIES + 1 {
+            let path = PathBuf::from(format!("/file{}.md", i));
+            cache.insert(path, mtime, format!("<h1>{}</h1>", i));
+        }
+        
+        // path1 should still be in cache (most recently accessed)
+        let result = cache.get(&path1, mtime);
+        assert!(result.is_some(), "most recently accessed entry should remain");
+    }
+
+    #[test]
+    fn cache_clear_resets_all_stats() {
+        let mut cache = RenderCache::default();
+        let mtime = SystemTime::UNIX_EPOCH;
+        
+        cache.insert(PathBuf::from("/test.md"), mtime, "<h1>Test</h1>".to_string());
+        cache.get(&PathBuf::from("/test.md"), mtime);
+        
+        cache.clear();
+        
+        let (count, size, hits, misses) = cache.get_stats();
+        assert_eq!(count, 0);
+        assert_eq!(size, 0);
+        assert_eq!(hits, 0);
+        assert_eq!(misses, 0);
     }
 
     #[test]

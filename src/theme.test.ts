@@ -53,13 +53,13 @@ describe("theme", () => {
       expect(isThemeId("light")).toBe(true);
       expect(isThemeId("sepia")).toBe(true);
       expect(isThemeId("dark")).toBe(true);
-      expect(isThemeId("modern")).toBe(true);
-      expect(isThemeId("nordic")).toBe(true);
     });
 
     it("returns false for invalid theme IDs", () => {
       expect(isThemeId("")).toBe(false);
       expect(isThemeId("invalid")).toBe(false);
+      expect(isThemeId("modern")).toBe(false);
+      expect(isThemeId("nordic")).toBe(false);
       expect(isThemeId("LIGHT")).toBe(false);
       expect(isThemeId("light ")).toBe(false);
       expect(isThemeId("solarized")).toBe(false);
@@ -78,8 +78,8 @@ describe("theme", () => {
       mockLocalStorage["mdglasses-theme"] = "dark";
       expect(loadThemePreference()).toBe("dark");
 
-      mockLocalStorage["mdglasses-theme"] = "modern";
-      expect(loadThemePreference()).toBe("modern");
+      mockLocalStorage["mdglasses-theme"] = "sepia";
+      expect(loadThemePreference()).toBe("sepia");
     });
 
     it("returns default theme when no value is saved", () => {
@@ -143,11 +143,11 @@ describe("theme", () => {
         value: "",
       } as HTMLSelectElement;
 
-      applyTheme("modern", mockSelect);
-      expect(mockSelect.value).toBe("modern");
+      applyTheme("dark", mockSelect);
+      expect(mockSelect.value).toBe("dark");
 
-      applyTheme("nordic", mockSelect);
-      expect(mockSelect.value).toBe("nordic");
+      applyTheme("sepia", mockSelect);
+      expect(mockSelect.value).toBe("sepia");
     });
 
     it("does not throw when themeSelect is null", () => {
@@ -182,8 +182,8 @@ describe("theme", () => {
       applyTheme("dark");
       expect(mockLocalStorage["mdglasses-theme"]).toBe("dark");
 
-      applyTheme("modern");
-      expect(mockLocalStorage["mdglasses-theme"]).toBe("modern");
+      applyTheme("sepia");
+      expect(mockLocalStorage["mdglasses-theme"]).toBe("sepia");
     });
 
     it("handles localStorage errors gracefully", () => {
@@ -200,7 +200,7 @@ describe("theme", () => {
     });
 
     it("applies all themes correctly", () => {
-      const themes = ["light", "sepia", "dark", "modern", "nordic"] as const;
+      const themes = ["light", "sepia", "dark"] as const;
       themes.forEach((theme) => {
         applyTheme(theme);
         expect(mockBody.dataset.theme).toBe(theme);
@@ -226,9 +226,9 @@ describe("theme", () => {
       expect(mockBody.dataset.theme).toBe("dark");
       expect(mockSelect.value).toBe("dark");
 
-      applyTheme("modern", mockSelect);
-      expect(mockBody.dataset.theme).toBe("modern");
-      expect(mockSelect.value).toBe("modern");
+      applyTheme("sepia", mockSelect);
+      expect(mockBody.dataset.theme).toBe("sepia");
+      expect(mockSelect.value).toBe("sepia");
     });
 
     it("updates stylesheet links correctly on theme changes", () => {

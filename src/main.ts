@@ -2,6 +2,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { injectCodeBlockCopyButtons } from "./codeBlockCopy";
 import { applyHighlighting, configureHighlighting } from "./highlight";
 import { normalizeBaseDir, resolvePath } from "./pathUtils";
 import { getInitialFile, openMarkdownFile, openWikiFolder, watchPaths } from "./tauriApi";
@@ -9,7 +10,13 @@ import { applyTheme, isThemeId, loadThemePreference } from "./theme";
 import { applySavedTreeWidth, initTreeResizer, renderTree, renderTreeSelection, setupTreeSearch, getLastSelectedPath } from "./treePanel";
 import type { Mode } from "./types";
 import { renderAppShell } from "./ui";
+import { showError } from "./notifications";
+import { showLoading, hideLoading } from "./loading";
+import { navigationHistory } from "./navigationHistory";
+import { registerShortcut } from "./keyboardNavigation";
 import "./styles.css";
+import "./notifications.css";
+import "./loading.css";
 
 interface AppState {
   mode: Mode;
@@ -21,7 +28,7 @@ interface AppState {
 const appRoot = document.querySelector<HTMLDivElement>("#app");
 if (!appRoot) throw new Error("Missing #app root element");
 
-const { contentEl, treePanel, treeResizeHandle, titleEl, btnOpen, openMenu, themeSelect, treeSearch, treeHideToggle, breadcrumb } = renderAppShell(appRoot);
+const { contentEl, treePanel, treeResizeHandle, titleEl, btnBack, btnForward, btnOpen, themeSelect, treeSearch, treeHideToggle, breadcrumb } = renderAppShell(appRoot);
 
 // Adicionar loading imediatamente para esconder mensagem "abra um arquivo" desde o início
 contentEl.classList.add("loading");
@@ -49,11 +56,6 @@ function isIgnoredImageSource(src: string): boolean {
   return src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:");
 }
 
-function closeOpenMenu(): void {
-  openMenu.classList.remove("is-open");
-  openMenu.setAttribute("aria-hidden", "true");
-}
-
 async function rewriteImages(baseDir: string): Promise<void> {
   const images = contentEl.querySelectorAll<HTMLImageElement>(".markdown-body img[src]");
   for (const image of images) {
@@ -73,43 +75,89 @@ async function renderMarkdownContent(html: string, baseDir: string): Promise<voi
   showContent(html);
   await rewriteImages(baseDir);
   applyHighlighting(contentEl);
+  injectCodeBlockCopyButtons(contentEl);
 }
 
 function getDisplayName(path: string): string {
   return path.split(/[/\\]/).pop() ?? "";
 }
 
+function updateNavigationButtons(): void {
+  btnBack.disabled = !navigationHistory.canGoBack();
+  btnForward.disabled = !navigationHistory.canGoForward();
+}
+
+async function navigateBack(): Promise<void> {
+  const entry = navigationHistory.goBack();
+  if (!entry) return;
+  
+  updateNavigationButtons();
+  if (entry.mode === "file") {
+    await loadFile(entry.path, { addToHistory: false });
+  } else {
+    await openWikiNote(entry.path, { addToHistory: false });
+  }
+}
+
+async function navigateForward(): Promise<void> {
+  const entry = navigationHistory.goForward();
+  if (!entry) return;
+  
+  updateNavigationButtons();
+  if (entry.mode === "file") {
+    await loadFile(entry.path, { addToHistory: false });
+  } else {
+    await openWikiNote(entry.path, { addToHistory: false });
+  }
+}
+
 function updateBreadcrumb(path: string, wikiRoot: string | null): void {
   breadcrumb.innerHTML = "";
+  breadcrumb.setAttribute("title", path); // Tooltip with full path
+  
   if (wikiRoot) {
     const relativePath = path.replace(wikiRoot, "").replace(/^[/\\]/, "");
     const parts = relativePath.split(/[/\\]/).filter((p) => p);
     const rootName = wikiRoot.split(/[/\\]/).filter((p) => p).pop() || "Pasta";
-    const link = document.createElement("a");
-    link.href = "#";
-    link.textContent = rootName;
-    link.addEventListener("click", (e) => {
+    
+    // Root link
+    const rootLink = document.createElement("a");
+    rootLink.href = "#";
+    rootLink.className = "breadcrumb-link";
+    rootLink.textContent = rootName;
+    rootLink.setAttribute("title", wikiRoot);
+    rootLink.addEventListener("click", (e) => {
       e.preventDefault();
       if (state.wikiRoot) {
         void loadWiki(state.wikiRoot);
       }
     });
-    breadcrumb.appendChild(link);
+    breadcrumb.appendChild(rootLink);
+    
+    // Parts
     parts.forEach((part, index) => {
       const separator = document.createElement("span");
       separator.className = "breadcrumb-separator";
       separator.textContent = " / ";
+      separator.setAttribute("aria-hidden", "true");
       breadcrumb.appendChild(separator);
+      
       if (index === parts.length - 1) {
+        // Current (last) part
         const span = document.createElement("span");
         span.className = "breadcrumb-current";
         span.textContent = part;
+        const fullPathToPart = wikiRoot + "/" + parts.slice(0, index + 1).join("/");
+        span.setAttribute("title", fullPathToPart);
         breadcrumb.appendChild(span);
       } else {
+        // Clickable intermediate parts
         const link = document.createElement("a");
         link.href = "#";
+        link.className = "breadcrumb-link";
         link.textContent = part;
         const pathToPart = wikiRoot + "/" + parts.slice(0, index + 1).join("/");
+        link.setAttribute("title", pathToPart);
         link.addEventListener("click", (e) => {
           e.preventDefault();
           void openWikiNote(pathToPart);
@@ -118,84 +166,128 @@ function updateBreadcrumb(path: string, wikiRoot: string | null): void {
       }
     });
   } else {
+    // File mode - show file name with full path as tooltip
     const span = document.createElement("span");
     span.className = "breadcrumb-current";
     span.textContent = getDisplayName(path);
+    span.setAttribute("title", path);
     breadcrumb.appendChild(span);
   }
 }
 
-async function loadFile(path: string, options: { watch?: boolean } = {}): Promise<void> {
-  const result = await openMarkdownFile(path);
+async function loadFile(path: string, options: { watch?: boolean; addToHistory?: boolean } = {}): Promise<void> {
+  const loadingId = `load-file-${Date.now()}`;
+  showLoading(loadingId, "Carregando arquivo...");
+  try {
+    const result = await openMarkdownFile(path);
 
-  state.mode = "file";
-  state.currentPath = path;
-  state.currentBaseDir = normalizeBaseDir(result.base_dir);
-  state.wikiRoot = null;
+    state.mode = "file";
+    state.currentPath = path;
+    state.currentBaseDir = normalizeBaseDir(result.base_dir);
+    state.wikiRoot = null;
 
-  treePanel.classList.add("hidden");
-  treePanel.innerHTML = "";
-  titleEl.textContent = getDisplayName(path);
-  updateBreadcrumb(path, null);
+    treePanel.classList.add("hidden");
+    treePanel.innerHTML = "";
+    titleEl.textContent = getDisplayName(path);
+    updateBreadcrumb(path, null);
 
-  await renderMarkdownContent(result.html, state.currentBaseDir);
+    await renderMarkdownContent(result.html, state.currentBaseDir);
 
-  if (options.watch !== false) {
-    await watchPaths([path]);
+    if (options.watch !== false) {
+      await watchPaths([path]);
+    }
+    
+    if (options.addToHistory !== false) {
+      navigationHistory.addEntry(path, "file");
+      updateNavigationButtons();
+    }
+    
+    hideLoading(loadingId);
+  } catch (error) {
+    hideLoading(loadingId);
+    const message = error instanceof Error ? error.message : "Erro ao carregar arquivo";
+    showError(`Não foi possível carregar o arquivo: ${message}`);
+    throw error;
   }
 }
 
-async function openWikiNote(path: string): Promise<void> {
+async function openWikiNote(path: string, options: { addToHistory?: boolean } = {}): Promise<void> {
   if (!state.wikiRoot) return;
 
-  const result = await openMarkdownFile(path, {
-    vaultRoot: state.wikiRoot,
-  });
+  const loadingId = `open-wiki-${Date.now()}`;
+  showLoading(loadingId, "Abrindo nota...");
+  try {
+    const result = await openMarkdownFile(path, {
+      vaultRoot: state.wikiRoot,
+    });
 
-  state.currentPath = path;
-  state.currentBaseDir = state.wikiRoot;
+    state.currentPath = path;
+    state.currentBaseDir = state.wikiRoot;
 
-  await renderMarkdownContent(result.html, state.wikiRoot);
-  renderTreeSelection(treePanel, path);
-  updateBreadcrumb(path, state.wikiRoot);
+    await renderMarkdownContent(result.html, state.wikiRoot);
+    renderTreeSelection(treePanel, path);
+    updateBreadcrumb(path, state.wikiRoot);
+    
+    if (options.addToHistory !== false) {
+      navigationHistory.addEntry(path, "wiki");
+      updateNavigationButtons();
+    }
+    
+    hideLoading(loadingId);
+  } catch (error) {
+    hideLoading(loadingId);
+    const message = error instanceof Error ? error.message : "Erro ao abrir nota";
+    showError(`Não foi possível abrir a nota: ${message}`);
+    throw error;
+  }
 }
 
 async function loadWiki(path: string): Promise<void> {
-  const result = await openWikiFolder(path);
+  const loadingId = `load-wiki-${Date.now()}`;
+  showLoading(loadingId, "Carregando pasta...");
+  try {
+    const result = await openWikiFolder(path);
 
-  state.mode = "wiki";
-  state.wikiRoot = normalizeBaseDir(path);
-  state.currentBaseDir = state.wikiRoot;
+    state.mode = "wiki";
+    state.wikiRoot = normalizeBaseDir(path);
+    state.currentBaseDir = state.wikiRoot;
 
-  treePanel.classList.remove("hidden");
-  applySavedTreeWidth(treePanel);
-  renderTree(treePanel, result.tree, result.initial_note_path, openWikiNote);
+    treePanel.classList.remove("hidden");
+    applySavedTreeWidth(treePanel);
+    renderTree(treePanel, result.tree, result.initial_note_path, openWikiNote);
 
-  if (result.initial_html && result.initial_note_path && state.wikiRoot) {
-    state.currentPath = result.initial_note_path;
-    await renderMarkdownContent(result.initial_html, state.wikiRoot);
-    renderTreeSelection(treePanel, result.initial_note_path);
-    updateBreadcrumb(result.initial_note_path, state.wikiRoot);
-  } else {
-    const lastSelected = getLastSelectedPath();
-    if (lastSelected && state.wikiRoot) {
-      try {
-        await openWikiNote(lastSelected);
-      } catch {
+    if (result.initial_html && result.initial_note_path && state.wikiRoot) {
+      state.currentPath = result.initial_note_path;
+      await renderMarkdownContent(result.initial_html, state.wikiRoot);
+      renderTreeSelection(treePanel, result.initial_note_path);
+      updateBreadcrumb(result.initial_note_path, state.wikiRoot);
+    } else {
+      const lastSelected = getLastSelectedPath();
+      if (lastSelected && state.wikiRoot) {
+        try {
+          await openWikiNote(lastSelected);
+        } catch {
+          state.currentPath = null;
+          showContent("");
+          breadcrumb.innerHTML = "";
+        }
+      } else {
         state.currentPath = null;
         showContent("");
         breadcrumb.innerHTML = "";
       }
-    } else {
-      state.currentPath = null;
-      showContent("");
-      breadcrumb.innerHTML = "";
     }
-  }
 
-  const rootName = state.wikiRoot?.split(/[/\\]/).filter((p) => p).pop() || "Pasta";
-  titleEl.textContent = rootName;
-  await watchPaths([path]);
+    const rootName = state.wikiRoot?.split(/[/\\]/).filter((p) => p).pop() || "Pasta";
+    titleEl.textContent = rootName;
+    await watchPaths([path]);
+    hideLoading(loadingId);
+  } catch (error) {
+    hideLoading(loadingId);
+    const message = error instanceof Error ? error.message : "Erro ao carregar pasta";
+    showError(`Não foi possível carregar a pasta: ${message}`);
+    throw error;
+  }
 }
 
 async function openRelativeLink(href: string): Promise<void> {
@@ -220,45 +312,76 @@ function setupTheme(): void {
   });
 }
 
-function setupOpenMenu(): void {
-  btnOpen.addEventListener("click", (event) => {
-    event.stopPropagation();
-    const isOpen = openMenu.classList.toggle("is-open");
-    openMenu.setAttribute("aria-hidden", String(!isOpen));
-  });
-
-  openMenu.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  openMenu.querySelectorAll<HTMLElement>("[data-open]").forEach((element) => {
-    element.addEventListener("click", async (event) => {
-      try {
-        closeOpenMenu();
-        const kind = (event.currentTarget as HTMLElement).dataset.open;
-
-        if (kind === "file") {
-          const selected = await open({
-            multiple: false,
-            filters: [{ name: "Markdown", extensions: ["md"] }],
-          });
-          if (selected && typeof selected === "string") {
-            await loadFile(selected);
-          }
-        } else if (kind === "folder") {
-          const selected = await open({ directory: true });
-          if (selected && typeof selected === "string") {
-            await loadWiki(selected);
-          }
-        }
-      } catch (error) {
-        console.error(error);
-      }
+function setupNavigation(): void {
+  btnBack.addEventListener("click", () => {
+    void navigateBack().catch((error) => {
+      const message = error instanceof Error ? error.message : "Erro ao navegar";
+      showError(`Não foi possível voltar: ${message}`);
     });
   });
 
-  document.addEventListener("click", () => {
-    closeOpenMenu();
+  btnForward.addEventListener("click", () => {
+    void navigateForward().catch((error) => {
+      const message = error instanceof Error ? error.message : "Erro ao navegar";
+      showError(`Não foi possível avançar: ${message}`);
+    });
+  });
+}
+
+function setupKeyboardShortcuts(): void {
+  // Ctrl/Cmd+O - Abrir arquivo/pasta
+  registerShortcut("o", () => {
+    btnOpen.click();
+  }, { ctrl: true, meta: true, description: "Abrir arquivo/pasta" });
+
+  // Ctrl/Cmd+F - Focar busca na árvore (wiki mode)
+  registerShortcut("f", () => {
+    if (!treePanel.classList.contains("hidden") && treeSearch) {
+      treeSearch.focus();
+    }
+  }, { ctrl: true, meta: true, description: "Buscar na árvore" });
+
+  // Alt+Left - Voltar
+  registerShortcut("ArrowLeft", () => {
+    if (navigationHistory.canGoBack()) {
+      void navigateBack().catch((error) => {
+        const message = error instanceof Error ? error.message : "Erro ao voltar";
+        showError(`Não foi possível voltar: ${message}`);
+      });
+    }
+  }, { alt: true, description: "Voltar" });
+
+  // Alt+Right - Avançar
+  registerShortcut("ArrowRight", () => {
+    if (navigationHistory.canGoForward()) {
+      void navigateForward().catch((error) => {
+        const message = error instanceof Error ? error.message : "Erro ao avançar";
+        showError(`Não foi possível avançar: ${message}`);
+      });
+    }
+  }, { alt: true, description: "Avançar" });
+
+}
+
+function setupOpen(): void {
+  btnOpen.addEventListener("click", async () => {
+    try {
+      const folderSelected = await open({ directory: true });
+      if (folderSelected && typeof folderSelected === "string") {
+        await loadWiki(folderSelected);
+        return;
+      }
+      const fileSelected = await open({
+        multiple: false,
+        filters: [{ name: "Markdown", extensions: ["md"] }],
+      });
+      if (fileSelected && typeof fileSelected === "string") {
+        await loadFile(fileSelected);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao abrir arquivo/pasta";
+      showError(message);
+    }
   });
 }
 
@@ -278,9 +401,13 @@ function setupLinkHandler(): void {
         const path = url.searchParams.get("path");
         const decoded = path ? decodeURIComponent(path) : "";
         if (decoded && state.mode === "wiki") {
-          void openWikiNote(decoded).catch(console.error);
+          void openWikiNote(decoded).catch(() => {
+            // Error already shown by openWikiNote
+          });
         } else if (decoded && state.mode === "file") {
-          void loadFile(decoded).catch(console.error);
+          void loadFile(decoded).catch(() => {
+            // Error already shown by loadFile
+          });
         }
       } catch {
         // Broken or invalid app://open link; do nothing
@@ -293,7 +420,10 @@ function setupLinkHandler(): void {
       return;
     }
 
-    void openRelativeLink(href).catch(console.error);
+    void openRelativeLink(href).catch((error) => {
+      const message = error instanceof Error ? error.message : "Erro ao abrir link";
+      showError(`Não foi possível abrir o link: ${message}`);
+    });
   });
 }
 
@@ -310,9 +440,13 @@ function setupWatchListener(): void {
     if (!changedCurrentPath) return;
 
     if (state.mode === "file") {
-      void loadFile(state.currentPath, { watch: false }).catch(console.error);
+      void loadFile(state.currentPath, { watch: false }).catch(() => {
+        // Error already shown by loadFile
+      });
     } else {
-      void openWikiNote(state.currentPath).catch(console.error);
+      void openWikiNote(state.currentPath).catch(() => {
+        // Error already shown by openWikiNote
+      });
     }
   });
 }
@@ -334,7 +468,8 @@ function bootstrap(): void {
       contentEl.classList.remove("loading");
     }
   }).catch((error) => {
-    console.error(error);
+    const message = error instanceof Error ? error.message : "Erro ao carregar arquivo inicial";
+    showError(`Não foi possível carregar o arquivo inicial: ${message}`);
     contentEl.classList.remove("loading");
   });
 
@@ -342,9 +477,12 @@ function bootstrap(): void {
   setupTheme();
   initTreeResizer(treePanel, treeResizeHandle);
   setupTreeSearch(treeSearch, treeHideToggle, treePanel);
-  setupOpenMenu();
+  setupNavigation();
+  setupKeyboardShortcuts();
+  setupOpen();
   setupLinkHandler();
   setupWatchListener();
+  updateNavigationButtons();
 }
 
 bootstrap();

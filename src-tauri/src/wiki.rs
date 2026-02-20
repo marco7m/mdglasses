@@ -64,6 +64,7 @@ fn walk_dir(dir: &Path, root: &str, out: &mut Vec<TreeNode>) -> Result<(), Strin
 }
 
 /// Returns (initial_note_path, initial_html) - prefers index.md, else first .md by name.
+#[allow(dead_code)]
 pub fn initial_note(root: &str) -> Result<(Option<String>, Option<String>), String> {
     let root_path = Path::new(root);
     let index = root_path.join("index.md");

@@ -1,26 +1,33 @@
 # mdglasses
 
-A cross-platform desktop Markdown reader built with Tauri.
+A cross-platform desktop Markdown reader built with Tauri. Open a single `.md` file or a folder as a wiki, navigate notes in a tree, and get live updates when files change on disk.
 
-Open a single `.md` file or a folder as a wiki, navigate notes in a tree, and get live updates when files change on disk.
+## Screenshots
+
+| Modo wiki (árvore) | Tema sepia | Tema escuro |
+|--------------------|------------|-------------|
+| <img src="docs/screenshots/folder-tree.png" alt="Modo wiki" width="360" /> | <img src="docs/screenshots/sepia-theme.png" alt="Tema sepia" width="360" /> | <img src="docs/screenshots/dark-theme.png" alt="Tema escuro" width="360" /> |
 
 ## Features
 
 - GitHub-like Markdown rendering
 - Wiki mode for folders with tree navigation
-- Internal Markdown link navigation
+- Single **Open** button: choose a folder (wiki) or cancel and choose a file
+- Internal Markdown link navigation (including Obsidian-style `[[wikilinks]]`)
 - Relative image loading from local files
 - Live reload via filesystem watcher
-- Code syntax highlighting
-- Multiple UI themes
+- Code syntax highlighting with copy-to-clipboard on code blocks
+- Multiple UI themes (light, sepia, dark)
 - Safe Markdown rendering (raw HTML disabled)
 
-## Tech Stack
+## Quick Start
 
-- Frontend: TypeScript + Vite
-- Desktop shell: Tauri v2
-- Markdown rendering: `comrak` (Rust)
-- Highlighting: `highlight.js`
+```bash
+npm install
+npm run tauri dev
+```
+
+This starts Vite + Tauri with hot reload.
 
 ## Prerequisites
 
@@ -36,15 +43,6 @@ Linux helper script:
 ```bash
 bash scripts/install-deps-linux.sh
 ```
-
-## Quick Start
-
-```bash
-npm install
-npm run tauri dev
-```
-
-This starts Vite + Tauri with hot reload.
 
 ## Development Commands
 
@@ -83,13 +81,16 @@ This script builds the frontend, links `dist/` to the expected release location,
 
 ## Usage
 
-- Use the **Open** button to choose:
-  - a single Markdown file
-  - a folder (wiki mode)
-- In wiki mode:
-  - browse `.md` files in the side tree
-  - search notes from the tree search box
-  - click internal links to navigate between notes
+- Click **Abrir** (Open): the **folder picker** appears first. Select a folder to open it as a wiki (tree of `.md` files). To open a single file instead, cancel the folder picker and then choose a Markdown file in the file picker.
+- In wiki mode: browse `.md` files in the side tree, search from the tree search box, and click internal links (or `[[wikilinks]]`) to navigate. Use the breadcrumb to jump back. Back/forward buttons and keyboard shortcuts (Alt+Left/Right) work for history.
+- Code blocks show a **Copy** button on the top-right edge.
+
+## Tech Stack
+
+- Frontend: TypeScript + Vite
+- Desktop shell: Tauri v2
+- Markdown rendering: `comrak` (Rust)
+- Highlighting: `highlight.js`
 
 ## Troubleshooting
 

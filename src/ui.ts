@@ -3,8 +3,9 @@ export interface AppElements {
   treePanel: HTMLElement;
   treeResizeHandle: HTMLElement;
   titleEl: HTMLElement;
+  btnBack: HTMLButtonElement;
+  btnForward: HTMLButtonElement;
   btnOpen: HTMLButtonElement;
-  openMenu: HTMLElement;
   themeSelect: HTMLSelectElement;
   treeSearch: HTMLInputElement;
   treeHideToggle: HTMLInputElement;
@@ -20,19 +21,21 @@ function requireElement<T extends Element>(parent: ParentNode, selector: string)
 export function renderAppShell(root: HTMLDivElement): AppElements {
   root.innerHTML = `
     <header class="toolbar">
+      <div class="toolbar-nav">
+        <button type="button" id="btn-back" class="btn-nav" aria-label="Voltar" disabled>
+          <span aria-hidden="true">←</span>
+        </button>
+        <button type="button" id="btn-forward" class="btn-nav" aria-label="Avançar" disabled>
+          <span aria-hidden="true">→</span>
+        </button>
+      </div>
       <div class="toolbar-open-wrap">
         <button type="button" id="btn-open" class="btn-open">Abrir</button>
-        <div class="dropdown-menu" id="open-menu" aria-hidden="true">
-          <button type="button" data-open="file">Ficheiro</button>
-          <button type="button" data-open="folder">Pasta</button>
-        </div>
       </div>
       <select id="theme-select" aria-label="Tema">
         <option value="light">Claro</option>
         <option value="sepia">Sepia</option>
         <option value="dark">Escuro</option>
-        <option value="modern">Modern</option>
-        <option value="nordic">Nordic</option>
       </select>
       <span id="title" class="title"></span>
     </header>
@@ -57,8 +60,9 @@ export function renderAppShell(root: HTMLDivElement): AppElements {
     treePanel: requireElement<HTMLElement>(root, "#tree-panel"),
     treeResizeHandle: requireElement<HTMLElement>(root, "#tree-resize-handle"),
     titleEl: requireElement<HTMLElement>(root, "#title"),
+    btnBack: requireElement<HTMLButtonElement>(root, "#btn-back"),
+    btnForward: requireElement<HTMLButtonElement>(root, "#btn-forward"),
     btnOpen: requireElement<HTMLButtonElement>(root, "#btn-open"),
-    openMenu: requireElement<HTMLElement>(root, "#open-menu"),
     themeSelect: requireElement<HTMLSelectElement>(root, "#theme-select"),
     treeSearch: requireElement<HTMLInputElement>(root, "#tree-search"),
     treeHideToggle: requireElement<HTMLInputElement>(root, "#tree-hide-patterns"),
