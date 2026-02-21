@@ -39,16 +39,8 @@ function isInputElement(element: Element | null): boolean {
 
 function handleKeyboardEvent(event: KeyboardEvent): void {
   if (!isEnabled) return;
-
-  // Don't handle shortcuts when typing in inputs (except for global shortcuts)
   const target = event.target as Element;
-  if (isInputElement(target)) {
-    // Allow some shortcuts even in inputs (like Esc)
-    if (event.key !== "Escape") {
-      return;
-    }
-  }
-
+  if (isInputElement(target) && event.key !== "Escape") return;
   for (const shortcut of shortcuts) {
     if (matchesShortcut(event, shortcut)) {
       event.preventDefault();
@@ -62,28 +54,13 @@ function handleKeyboardEvent(event: KeyboardEvent): void {
 export function registerShortcut(
   key: string,
   handler: KeyboardHandler,
-  options: {
-    ctrl?: boolean;
-    meta?: boolean;
-    alt?: boolean;
-    shift?: boolean;
-    description?: string;
-  } = {}
+  options: { ctrl?: boolean; meta?: boolean; alt?: boolean; shift?: boolean; description?: string } = {}
 ): () => void {
-  const shortcut: KeyboardShortcut = {
-    key,
-    handler,
-    ...options,
-  };
-
+  const shortcut = { key, handler, ...options };
   shortcuts.push(shortcut);
-
-  // Return unregister function
   return () => {
     const index = shortcuts.indexOf(shortcut);
-    if (index > -1) {
-      shortcuts.splice(index, 1);
-    }
+    if (index > -1) shortcuts.splice(index, 1);
   };
 }
 
@@ -103,7 +80,6 @@ export function getRegisteredShortcuts(): readonly KeyboardShortcut[] {
   return [...shortcuts];
 }
 
-// Initialize keyboard listener
 if (typeof document !== "undefined") {
   document.addEventListener("keydown", handleKeyboardEvent, true);
 }

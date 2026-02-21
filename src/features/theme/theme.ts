@@ -1,7 +1,7 @@
 import hljsLightUrl from "highlight.js/styles/github.css?url";
 import hljsDarkUrl from "highlight.js/styles/github-dark.css?url";
 import markdownDarkUrl from "github-markdown-css/github-markdown-dark.css?url";
-import type { ThemeId } from "./types";
+import type { ThemeId } from "../../types";
 
 const THEME_STORAGE_KEY = "mdglasses-theme";
 const DEFAULT_THEME: ThemeId = "light";

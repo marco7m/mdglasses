@@ -126,6 +126,11 @@ Port `1420` already in use:
 lsof -ti:1420 | xargs -r kill
 ```
 
+## Code structure
+
+- **Frontend** (`src/`): `main.ts` is the entry point and wires state and setup. Core API and path utils live in `core/`. UI shell, loading, and notifications in `ui/`. Feature logic in `features/` (content, navigation, tree, theme, keyboard, open).
+- **Backend** (`src-tauri/src/`): `lib.rs` builds the Tauri app and registers commands. Shared state and types in `app/`. Command implementations in `app/commands.rs`. Watch service in `app/watch.rs`. Obsidian-style embed and wikilink handling in `obsidian_embed/` (parse, index, cache, resolve, render).
+
 ## Tech stack
 
 - Frontend: TypeScript + Vite

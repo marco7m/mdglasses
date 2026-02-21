@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { TreeNode } from "./types";
+import type { TreeNode } from "../../types";
 import {
   getFileIcon,
   filterTree,

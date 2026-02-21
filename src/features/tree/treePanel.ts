@@ -1,4 +1,4 @@
-import type { TreeNode } from "./types";
+import type { TreeNode } from "../../types";
 
 const TREE_MIN_WIDTH = 180;
 const TREE_MAX_WIDTH = 480;

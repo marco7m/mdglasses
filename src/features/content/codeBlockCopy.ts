@@ -1,4 +1,4 @@
-import { showError } from "./notifications";
+import { showError } from "../../ui/notifications";
 
 const COPIED_DURATION_MS = 1500;
 

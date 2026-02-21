@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { OpenMarkdownFileResult, OpenWikiFolderResult } from "./types";
+import type { OpenMarkdownFileResult, OpenWikiFolderResult } from "../types";
 
 export interface InitialPath {
   path: string;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getInitialFile, openMarkdownFile, openWikiFolder, watchPaths } from "./tauriApi";
+import { getInitialFile, openMarkdownFile, openWikiFolder, watchPaths } from "./api";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),

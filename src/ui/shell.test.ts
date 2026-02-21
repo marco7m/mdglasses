@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderAppShell } from "./ui";
+import { renderAppShell } from "./shell";
 
 describe("ui", () => {
   describe("renderAppShell", () => {
